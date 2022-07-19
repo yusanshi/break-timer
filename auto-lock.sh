@@ -3,27 +3,31 @@
 # kill other instances of this script
 pgrep "$(basename $0)" | grep -v "$$" | xargs --no-run-if-empty kill 
 
-INDICATOR_TARGET=$HOME/.config/argos/auto-lock-indicator.1s.sh
-
 while true
 do
-    duration=$((${1:-50} * 60))
-    echo "Sleep $duration seconds"
+    test_string="(pgrep $(basename $0) | grep --line-regexp $$)"
+    test_string="\$$test_string"
 
     start=$(date +%s)
-    remained_string='$(($start+$duration-$(date +%s)))'
+    duration=$((${1:-50} * 60))
+    current='$(date +%s)'
+    echo_string="((($start + $duration - $current) / 60)) min | iconName=system-lock-screen"
+    echo_string="\$$echo_string"
 
-    cat <<EOF > $INDICATOR_TARGET
+    cat <<EOF > $HOME/.config/argos/auto-lock-indicator.1s.sh
 #!/usr/bin/env bash
 
-start=$start
-duration=$duration
-
-echo "$remained_string seconds | iconName=system-lock-screen"
+if [[ "$test_string" ]]
+then
+    echo "$echo_string"
+else
+    echo "| iconName=system-lock-screen"
+fi
 EOF
 
+    echo "Sleep $duration seconds"
     sleep $duration
-    for i in {1..200}
+    for i in {1..240}
         do
             echo "Locking"
             xdg-screensaver lock
