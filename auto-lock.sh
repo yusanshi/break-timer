@@ -21,7 +21,7 @@ if [[ "$test_string" ]]
 then
     echo "$echo_string"
 else
-    echo "| iconName=system-lock-screen"
+    echo " "
 fi
 EOF
 
