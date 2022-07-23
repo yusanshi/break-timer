@@ -1,15 +1,18 @@
 #!/bin/bash
 
-echo "[$(date)] startup, running the script..." >> $HOME/auto-lock/log.txt
+echo "[$(date)] logged in, running the script..." >> $HOME/auto-lock/log.txt
 $HOME/auto-lock/auto-lock.sh &
 
-dbus-monitor --session "type='signal',interface='org.gnome.ScreenSaver'" | \
-( while true
-    do read X
-    if echo $X | grep "boolean true" &> /dev/null; then
+gdbus monitor -y -d org.freedesktop.login1 |
+  while read x
+  do
+    case "$x" in
+      *"{'LockedHint': <true>}"*)
         echo "[$(date)] locked. " >> $HOME/auto-lock/log.txt
-    elif echo $X | grep "boolean false" &> /dev/null; then
+        ;;
+      *"{'LockedHint': <false>}"*)
         echo "[$(date)] unlocked, running the script..." >> $HOME/auto-lock/log.txt
         $HOME/auto-lock/auto-lock.sh &
-    fi
-    done )
+        ;;
+    esac
+  done
