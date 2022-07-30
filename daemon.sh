@@ -1,18 +1,24 @@
 #!/bin/bash
 
-echo "[$(date)] logged in, running the script..." >> $HOME/auto-lock/log.txt
-$HOME/auto-lock/auto-lock.sh &
+target_file=$HOME/auto-lock/auto-lock.sh
+log_file=$HOME/auto-lock/log.txt
 
-dbus-monitor --session "type='signal',interface='org.gnome.ScreenSaver'" |
-  while read x
-  do
-    case "$x" in
-      *"boolean true"*)
-        echo "[$(date)] locked. " >> $HOME/auto-lock/log.txt
-        ;;
-      *"boolean false"*)
-        echo "[$(date)] unlocked, running the script..." >> $HOME/auto-lock/log.txt
-        $HOME/auto-lock/auto-lock.sh &
-        ;;
-    esac
-  done
+echo "[$(date)] logged in, running the script..." | tee -a $log_file
+$target_file &
+
+history_unlocked=$(gnome-screensaver-command -q | grep "is inactive")
+while true
+do
+  sleep 1
+  current_unlocked=$(gnome-screensaver-command -q | grep "is inactive")
+  if [[ ! $history_unlocked ]] && [[ $current_unlocked ]]
+  then
+    echo "[$(date)] unlocked, running the script..." | tee -a $log_file
+    $target_file &
+  fi
+  if [[ $history_unlocked ]] && [[ ! $current_unlocked ]]
+  then
+    echo "[$(date)] locked. " | tee -a $log_file
+  fi
+  history_unlocked=$current_unlocked
+done
