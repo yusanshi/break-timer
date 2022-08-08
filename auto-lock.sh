@@ -8,7 +8,7 @@ test_string="(pgrep $(basename $0) | grep --line-regexp $$)"
 test_string="\$$test_string"
 
 start=$(date +%s)
-duration=$((${1:-50} * 60))
+duration=$((${1:-40} * 60))
 current='$(date +%s)'
 echo_string="((($start + $duration - $current) / 60)) min | iconName=system-lock-screen"
 echo_string="\$$echo_string"
@@ -26,7 +26,7 @@ EOF
 
 echo "Sleep $duration seconds"
 sleep $duration
-for i in {1..240}
+for i in {1..600}
     do
         echo "Locking"
         xdg-screensaver lock
