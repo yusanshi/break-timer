@@ -53,16 +53,16 @@ else:
 ''')
 
 
-log_dir = Path(__file__).parent / 'log'
-log_dir.mkdir(exist_ok=True)
+# log_dir = Path(__file__).parent / 'log'
+# log_dir.mkdir(exist_ok=True)
 
 logging.basicConfig(
     level=logging.INFO,
     format="[%(asctime)s] %(message)s",
     handlers=[
-        logging.FileHandler(
-            log_dir /
-            f'{datetime.now().replace(microsecond=0).isoformat()}.txt'),
+        # logging.FileHandler(
+        #     log_dir /
+        #     f'{datetime.now().replace(microsecond=0).isoformat()}.txt'),
         logging.StreamHandler()
     ])
 
