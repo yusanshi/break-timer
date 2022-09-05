@@ -1,26 +1,18 @@
 #!/usr/bin/env python3
 
-from enum import Enum
-from time import sleep, time
-from datetime import datetime
-from subprocess import check_output
-from pathlib import Path
-import os
 import logging
+import os
+from datetime import datetime
+from enum import Enum
+from pathlib import Path
+from subprocess import check_output
+from time import sleep, time
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="[%(asctime)s] %(message)s",
-    handlers=[
-        logging.FileHandler(
-            Path(__file__).parent / 'log' /
-            f'{datetime.now().replace(microsecond=0).isoformat()}.txt'),
-        logging.StreamHandler()
-    ])
+import psutil
 
 UNLOCKED_INTERVAL = 40 * 60
 LOCKED_INTERVAL = 10 * 60
-SHOW_SECONDS = True
+SHOW_SECONDS = False
 
 
 class State(Enum):
@@ -37,24 +29,49 @@ def get_state():
 
 
 def lock():
-    check_output('xdg-screensaver lock', shell=True)
+    os.system('xdg-screensaver lock')
 
 
-def set_indicator(start):
+def set_timer(start):
+    pid = os.getpid()
+    pname = psutil.Process(pid).name()
     with open(os.path.expanduser('~/.config/argos/auto-lock-indicator.1s.py'),
               'w') as f:
         f.write(f'''#!/usr/bin/env python3
 from time import time
+import psutil
+
+pid = {pid}
+pname = '{pname}'
 left = {start} + {UNLOCKED_INTERVAL} - time()
-if {SHOW_SECONDS}:
-    print(f"{{int(left)}} s | iconName=system-lock-screen")
+if psutil.pid_exists(pid) and psutil.Process(pid).name() == pname:
+    if left > 300:
+        if {SHOW_SECONDS}:
+            print(f"{{int(left)}} s | iconName=system-lock-screen")
+        else:
+            print(f"{{int(left / 60)}} min | iconName=system-lock-screen")
+    else:
+        print('| iconName=system-lock-screen')
 else:
-    print(f"{{int(left / 60)}} min | iconName=system-lock-screen")
+    print(' ')
 ''')
 
 
-current = State.unlockable
+log_dir = Path(__file__).parent / 'log'
+log_dir.mkdir(exist_ok=True)
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="[%(asctime)s] %(message)s",
+    handlers=[
+        logging.FileHandler(
+            log_dir /
+            f'{datetime.now().replace(microsecond=0).isoformat()}.txt'),
+        logging.StreamHandler()
+    ])
+
 logging.info('Begin running')
+current = State.unlockable
 
 while True:
     sleep(1)
@@ -84,7 +101,7 @@ while True:
         logging.info('Unlockable -> Unlocked')
         start = time()
         current = State.unlocked
-        set_indicator(start)
+        set_timer(start)
 
     if current == State.locked:
         logging.info('Locking')
