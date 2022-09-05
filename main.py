@@ -9,7 +9,6 @@ from pathlib import Path
 from subprocess import check_output
 from time import sleep, time
 
-import psutil
 import setproctitle
 
 setproctitle.setproctitle(str(uuid.uuid4()))
@@ -37,27 +36,20 @@ def lock():
 
 
 def set_timer(start):
-    pid = os.getpid()
-    pname = psutil.Process(pid).name()
     with open(os.path.expanduser('~/.config/argos/auto-lock-indicator.1s.py'),
               'w') as f:
         f.write(f'''#!/usr/bin/env python3
 from time import time
-import psutil
 
-pid = {pid}
-pname = '{pname}'
 left = {start} + {UNLOCKED_INTERVAL} - time()
-if psutil.pid_exists(pid) and psutil.Process(pid).name() == pname:
-    if left > 300:
-        if {SHOW_SECONDS}:
-            print(f"{{int(left)}} s | iconName=system-lock-screen")
-        else:
-            print(f"{{int(left / 60)}} min | iconName=system-lock-screen")
+if left > 1200:
+    if {SHOW_SECONDS}:
+        print(f"{{int(left)}} s | iconName=system-lock-screen")
     else:
-        print('| iconName=system-lock-screen')
+        print(f"{{int(left / 60)}} min | iconName=system-lock-screen")
 else:
-    print(' ')
+    print('| iconName=system-lock-screen')
+
 ''')
 
 
