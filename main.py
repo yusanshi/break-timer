@@ -53,18 +53,27 @@ else:
 ''')
 
 
-# log_dir = Path(__file__).parent / 'log'
-# log_dir.mkdir(exist_ok=True)
+log_dir = Path(__file__).parent / 'log'
+log_dir.mkdir(exist_ok=True)
+log_file = log_dir / f'{datetime.now().replace(microsecond=0).isoformat()}.txt'
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="[%(asctime)s] %(message)s",
-    handlers=[
-        # logging.FileHandler(
-        #     log_dir /
-        #     f'{datetime.now().replace(microsecond=0).isoformat()}.txt'),
-        logging.StreamHandler()
-    ])
+
+class MyLoggingHandler(logging.Handler):
+
+    def emit(self, record):
+        try:
+            msg = self.format(record)
+            print(msg)
+            with open(log_file, 'a') as f:
+                f.write(msg + '\n')
+            self.flush()
+        except Exception:
+            self.handleError(record)
+
+
+logging.basicConfig(level=logging.INFO,
+                    format="[%(asctime)s] %(message)s",
+                    handlers=[MyLoggingHandler()])
 
 logging.info('Begin running')
 current = State.unlockable
