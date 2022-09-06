@@ -2,16 +2,18 @@
 
 import logging
 import os
-import uuid
+import random
 from datetime import datetime
 from enum import Enum
 from pathlib import Path
 from subprocess import check_output
 from time import sleep, time
 
+import psutil
 import setproctitle
 
-setproctitle.setproctitle(str(uuid.uuid4()))
+setproctitle.setproctitle(
+    random.choice([p.name() for p in psutil.process_iter()]))
 
 UNLOCKED_INTERVAL = 40 * 60
 LOCKED_INTERVAL = 10 * 60
@@ -42,7 +44,7 @@ def set_timer(start):
 from time import time
 
 left = {start} + {UNLOCKED_INTERVAL} - time()
-if left > 1200:
+if left > {UNLOCKED_INTERVAL} / 2:
     if {SHOW_SECONDS}:
         print(f"{{int(left)}} s | iconName=system-lock-screen")
     else:
@@ -94,11 +96,15 @@ while True:
     actual = get_state()
     if int(time()) % 10 == 0:
         logging.info(f'{current = }, {actual = }')
-    if current == State.unlocked and (time() - start > UNLOCKED_INTERVAL
-                                      or actual == State.locked):
+    if current == State.unlocked and time() - start > UNLOCKED_INTERVAL:
         logging.info('Unlocked -> Locked')
         start = time()
         current = State.locked
+    if current == State.unlocked and actual == State.locked and time(
+    ) - start < UNLOCKED_INTERVAL / 2:
+        # manually lock it in early time
+        logging.info('Unlocked -> Unlockable')
+        current = State.unlockable
     if current == State.locked and time() - start > LOCKED_INTERVAL:
         logging.info('Locked -> Unlockable')
         current = State.unlockable
