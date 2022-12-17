@@ -111,7 +111,7 @@ while True:
     unlockable      ✓        x        -
     """
 
-    UNLOCKED_INTERVAL = 45 * 60 if 6 <= datetime.now().hour <= 22 else 10 * 60
+    UNLOCKED_INTERVAL = 50 * 60
 
     actual = get_state()
     if int(time()) % 20 == 0:
