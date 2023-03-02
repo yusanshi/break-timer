@@ -3,23 +3,40 @@
 import logging
 import os
 import random
+import stat
 import subprocess
+import sys
+import tempfile
 from datetime import datetime
 from enum import Enum
 from pathlib import Path
 from time import sleep, time
-import tempfile
-
-from pathlib import Path
-import stat
 
 import psutil
 import setproctitle
 
+from message_box import message_box_action
+
 setproctitle.setproctitle(
     random.choice([p.name() for p in psutil.process_iter()]))
 
-LOCKED_INTERVAL = 10 * 60
+argos_file = Path(
+    os.path.expanduser('~/.config/argos/auto-lock-indicator.1s.py'))
+
+
+def skip():
+    argos_file.unlink(missing_ok=True)
+    sys.exit()
+
+
+message_box_action(
+    no_action=skip,
+    message='Run auto-lock?',
+    timeout=8000,
+    default=True,
+)
+
+LOCKED_INTERVAL = 8 * 60
 SHOW_SECONDS = False
 
 
@@ -44,18 +61,17 @@ screensaver_full_path = subprocess.check_output('which xdg-screensaver',
 with open(screensaver_full_path) as f:
     screensaver_text = f.read()
 
+screensaver_file = tempfile.NamedTemporaryFile()
+with open(screensaver_file.name, 'w') as f:
+    f.write(screensaver_text)
+
 
 def lock():
-    tmp = tempfile.NamedTemporaryFile()
-    with open(tmp.name, 'w') as f:
-        f.write(screensaver_text)
-    subprocess.run(['bash', tmp.name, 'lock'])
+    subprocess.run(['bash', screensaver_file.name, 'lock'])
 
 
 def set_timer(start):
-    file = Path(
-        os.path.expanduser('~/.config/argos/auto-lock-indicator.1s.py'))
-    with open(file, 'w') as f:
+    with open(argos_file, 'w') as f:
         f.write(f'''#!/usr/bin/env python3
 from time import time
 
@@ -70,7 +86,7 @@ else:
 
 ''')
 
-    file.chmod(file.stat().st_mode | stat.S_IEXEC)
+    argos_file.chmod(argos_file.stat().st_mode | stat.S_IEXEC)
 
 
 log_dir = Path(__file__).parent / 'log'
