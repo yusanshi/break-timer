@@ -32,8 +32,8 @@ def skip():
 message_box_action(
     no_action=skip,
     message='Run auto-lock?',
-    timeout=8000,
-    default=True,
+    timeout=16000,
+    default=False,
 )
 
 LOCKED_INTERVAL = 8 * 60
