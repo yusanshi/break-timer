@@ -32,8 +32,8 @@ def skip():
 message_box_action(
     no_action=skip,
     message='Run auto-lock?',
-    timeout=16000,
-    default=False,
+    timeout=8000,
+    default=True,
 )
 
 LOCKED_INTERVAL = 8 * 60
@@ -89,27 +89,7 @@ else:
     argos_file.chmod(argos_file.stat().st_mode | stat.S_IEXEC)
 
 
-log_dir = Path(__file__).parent / 'log'
-log_dir.mkdir(exist_ok=True)
-log_file = log_dir / f'{datetime.now().replace(microsecond=0).isoformat()}.txt'
-
-
-class MyLoggingHandler(logging.Handler):
-
-    def emit(self, record):
-        try:
-            msg = self.format(record)
-            print(msg)
-            with open(log_file, 'a') as f:
-                f.write(msg + '\n')
-            self.flush()
-        except Exception:
-            self.handleError(record)
-
-
-logging.basicConfig(level=logging.INFO,
-                    format="[%(asctime)s] %(message)s",
-                    handlers=[MyLoggingHandler()])
+logging.basicConfig(level=logging.INFO, format="[%(asctime)s] %(message)s")
 
 logging.info('Begin running')
 current = State.unlockable
