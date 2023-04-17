@@ -2,37 +2,15 @@
 
 import logging
 import os
-import random
 import stat
 import subprocess
-import sys
-import tempfile
+
 from enum import Enum
 from pathlib import Path
 from time import sleep, time
 
-import psutil
-import setproctitle
-
-from message_box import message_box_action
-
-setproctitle.setproctitle(
-    random.choice([p.name() for p in psutil.process_iter()]))
-
-argos_file = Path(os.path.expanduser('~/.config/argos/auto-lock-strict.1s.py'))
-
-
-def skip():
-    argos_file.unlink(missing_ok=True)
-    sys.exit()
-
-
-message_box_action(
-    no_action=skip,
-    message='Run auto-lock (strict mode)?',
-    timeout=8000,
-    default=True,
-)
+argos_file = Path(
+    os.path.expanduser('~/.config/argos/auto-lock-non-strict.1s.py'))
 
 LOCKED_INTERVAL = 8 * 60
 UNLOCKED_INTERVAL = 50 * 60
@@ -53,22 +31,6 @@ def get_state():
     return State.unlocked if '/usr/share/gnome-shell/extensions/ding@rastersoft.com/ding.js' in output else State.locked
 
 
-screensaver_full_path = subprocess.check_output('which xdg-screensaver',
-                                                shell=True,
-                                                text=True).strip()
-
-with open(screensaver_full_path) as f:
-    screensaver_text = f.read()
-
-screensaver_file = tempfile.NamedTemporaryFile()
-with open(screensaver_file.name, 'w') as f:
-    f.write(screensaver_text)
-
-
-def lock():
-    subprocess.run(['bash', screensaver_file.name, 'lock'])
-
-
 def set_timer(start):
     with open(argos_file, 'w') as f:
         f.write(f'''#!/usr/bin/env python3
@@ -80,6 +42,10 @@ if left > {UNLOCKED_INTERVAL} / 2:
         print(f"{{int(left)}} s")
     else:
         print(f"{{int(left / 60)}} min")
+elif left > 0:
+    print(' ')
+elif int(time()) % 2 == 0:
+    print(f"Break time | iconName=dialog-warning")
 else:
     print(' ')
 
@@ -132,9 +98,3 @@ while True:
         start = time()
         current = State.unlocked
         set_timer(start)
-
-    if current == State.locked:
-        logging.info('Locking')
-        lock()
-        if get_state() != State.locked:
-            logging.info('Error: Locking failed')
