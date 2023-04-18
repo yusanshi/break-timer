@@ -7,6 +7,8 @@ import stat
 import subprocess
 import sys
 import tempfile
+import base64
+
 from enum import Enum
 from pathlib import Path
 from time import sleep, time
@@ -19,7 +21,7 @@ from message_box import message_box_action
 setproctitle.setproctitle(
     random.choice([p.name() for p in psutil.process_iter()]))
 
-argos_file = Path(os.path.expanduser('~/.config/argos/auto-lock-strict.1s.py'))
+argos_file = Path(os.path.expanduser('~/.config/argos/auto-lock.1s.py'))
 
 
 def skip():
@@ -69,6 +71,11 @@ def lock():
     subprocess.run(['bash', screensaver_file.name, 'lock'])
 
 
+def get_image_base64(filename):
+    with open(Path(__file__).parent / 'image' / filename, 'rb') as f:
+        return base64.b64encode(f.read()).decode()
+
+
 def set_timer(start):
     with open(argos_file, 'w') as f:
         f.write(f'''#!/usr/bin/env python3
@@ -77,9 +84,9 @@ from time import time
 left = {start} + {UNLOCKED_INTERVAL} - time()
 if left > {UNLOCKED_INTERVAL} / 2:
     if {SHOW_SECONDS}:
-        print(f"{{int(left)}} s")
+        print(f"{{int(left)}} s | image='{get_image_base64("sand-clock-color.png")}' imageHeight=30")
     else:
-        print(f"{{int(left / 60)}} min")
+        print(f"{{int(left / 60)}} min | image='{get_image_base64("sand-clock-color.png")}' imageHeight=30")
 else:
     print(' ')
 
