@@ -95,7 +95,8 @@ while True:
                 logging.info('Unlocked -> Locked')
                 start = time()
                 current = State.locked
-    if current == State.locked and time() - start > LOCKED_INTERVAL:
+    if current == State.locked and actual == State.locked and time(
+    ) - start > LOCKED_INTERVAL:
         logging.info('Locked -> Unlockable')
         current = State.unlockable
     if current == State.unlockable and actual == State.unlocked:
