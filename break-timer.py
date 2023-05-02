@@ -25,7 +25,7 @@ def get_image_base64(filename):
         return base64.b64encode(f.read()).decode()
 
 
-argos_file = Path(os.path.expanduser('~/.config/argos/auto-lock.1s.py'))
+argos_file = Path(os.path.expanduser('~/.config/argos/break-timer.1s.py'))
 
 
 def write_argos_file(text):
@@ -51,7 +51,7 @@ states = [
 ]
 
 
-class AutoLocker:
+class BreakTimer:
 
     def __init__(self):
         self.machine = CustomStateMachine(model=self, states=states)
@@ -116,7 +116,7 @@ class AutoLocker:
         return time() - self.locked_start > LOCKED_INTERVAL
 
 
-locker = AutoLocker()
+timer = BreakTimer()
 
 while True:
     sleep(1)
@@ -125,8 +125,8 @@ while True:
                                      shell=True,
                                      text=True)
     if '/usr/share/gnome-shell/extensions/ding@rastersoft.com/ding.js' in output:
-        if locker.may_unlock():
-            locker.unlock()
+        if timer.may_unlock():
+            timer.unlock()
     else:
-        if locker.may_lock():
-            locker.lock()
+        if timer.may_lock():
+            timer.lock()
