@@ -5,6 +5,10 @@ import os
 import base64
 import stat
 import logging
+import psutil
+import setproctitle
+import random
+import tempfile
 
 from transitions import Machine
 from transitions.extensions.states import add_state_features, Timeout
@@ -12,12 +16,33 @@ from time import sleep, time
 from pathlib import Path
 from textwrap import dedent
 
+setproctitle.setproctitle(
+    random.choice([p.name() for p in psutil.process_iter()]))
+
+screensaver_full_path = subprocess.check_output('which xdg-screensaver',
+                                                shell=True,
+                                                text=True).strip()
+with open(screensaver_full_path) as f:
+    screensaver_text = f.read()
+
 logging.basicConfig(level=logging.DEBUG, format="[%(asctime)s] %(message)s")
 logging.getLogger('transitions').setLevel(logging.INFO)
 
 LOCKED_INTERVAL = 8 * 60
 UNLOCKED_INTERVAL = 50 * 60
 SHOW_SECONDS = False
+STRICT = True
+
+
+def exempt():
+    """Avoid locking if is doing something important"""
+    # exempt if is using the web camera (possibly in a interview)
+    try:
+        return len(
+            subprocess.check_output('fuser /dev/video0', shell=True,
+                                    text=True).strip()) > 0
+    except subprocess.CalledProcessError:
+        return False
 
 
 def get_image_base64(filename):
@@ -96,16 +121,26 @@ class BreakTimer:
         self.locked_start = time()
 
     def on_enter_wait_lock(self):
-        write_argos_file(
-            dedent(f'''\
-                #!/usr/bin/env python3
-                from time import time
+        if STRICT:
+            if exempt():
+                write_argos_file(
+                    dedent(f'''\
+                        #!/usr/bin/env python3
 
-                if int(time()) % 2 == 0:
+                        print(f"Lock exempted | image='{get_image_base64("warning.png")}' imageHeight=30")
+                        '''))
+            else:
+                screensaver_file = tempfile.NamedTemporaryFile()
+                with open(screensaver_file.name, 'w') as f:
+                    f.write(screensaver_text)
+                subprocess.run(['bash', screensaver_file.name, 'lock'])
+        else:
+            write_argos_file(
+                dedent(f'''\
+                    #!/usr/bin/env python3
+
                     print(f"Break time | image='{get_image_base64("error.png")}' imageHeight=30")
-                else:
-                    print(' ')
-                '''))
+                    '''))
 
     @property
     def unlocked_exceeding_half(self):
