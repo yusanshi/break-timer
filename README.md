@@ -1,5 +1,5 @@
 # break-timer
 
-![image](https://user-images.githubusercontent.com/36265606/235727778-6a49ddde-5ad7-4b4b-8d6b-8937d43ae3a2.png)
+![image](https://github.com/yusanshi/break-timer/assets/36265606/83e0250b-bcb1-48a5-8ae9-a4c4ee00cdde)
 
 

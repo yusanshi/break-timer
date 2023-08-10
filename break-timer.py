@@ -32,7 +32,7 @@ LOCKED_INTERVAL = 8 * 60
 UNLOCKED_INTERVAL = 50 * 60
 
 
-def exempt():
+def should_exempt():
     """Avoid locking if is doing something important"""
     # exempt if is using the web camera (possibly in a interview)
     try:
@@ -66,11 +66,11 @@ states = [
     {
         'name': 'unlocked',
         'timeout': UNLOCKED_INTERVAL,
-        'on_timeout': 'to_wait_lock'
+        'on_timeout': 'to_locked'
     },
     'unlockable',
     'locked',
-    'wait_lock',
+    'exempted',
 ]
 
 
@@ -86,7 +86,6 @@ class BreakTimer:
                                     'unlocked',
                                     'unlockable',
                                     unless='unlocked_exceeding_half')
-        self.machine.add_transition('lock', 'wait_lock', 'locked')
         self.machine.add_transition('unlock', 'unlockable', 'unlocked')
         self.machine.add_transition('unlock',
                                     'locked',
@@ -94,8 +93,10 @@ class BreakTimer:
                                     conditions='fully_locked')
         self.machine.add_transition('unlock',
                                     'locked',
-                                    'wait_lock',
+                                    'locked',
                                     unless='fully_locked')
+        self.machine.add_transition('exempt', 'unlocked', 'exempted')
+        self.machine.add_transition('restore', 'exempted', 'unlocked')
         self.to_unlocked()
 
     def on_enter_unlocked(self):
@@ -114,20 +115,18 @@ class BreakTimer:
 
     def on_enter_locked(self):
         self.locked_start = time()
+        screensaver_file = tempfile.NamedTemporaryFile()
+        with open(screensaver_file.name, 'w') as f:
+            f.write(screensaver_text)
+        subprocess.run(['bash', screensaver_file.name, 'lock'])
 
-    def on_enter_wait_lock(self):
-        if exempt():
-            write_argos_file(
-                dedent(f'''\
-                    #!/usr/bin/env python3
+    def on_enter_exempted(self):
+        write_argos_file(
+            dedent(f'''\
+                #!/usr/bin/env python3
 
-                    print(f"Lock exempted | image='{get_image_base64("warning.png")}' imageHeight=30")
-                    '''))
-        else:
-            screensaver_file = tempfile.NamedTemporaryFile()
-            with open(screensaver_file.name, 'w') as f:
-                f.write(screensaver_text)
-            subprocess.run(['bash', screensaver_file.name, 'lock'])
+                print(f"Lock exempted | image='{get_image_base64("info.png")}' imageHeight=30")
+                '''))
 
     @property
     def unlocked_exceeding_half(self):
@@ -153,3 +152,11 @@ if __name__ == '__main__':
         else:
             if timer.may_lock():
                 timer.lock()
+
+        if int(time()) % 10 == 0:
+            if should_exempt():
+                if timer.may_exempt():
+                    timer.exempt()
+            else:
+                if timer.may_restore():
+                    timer.restore()
