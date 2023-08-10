@@ -30,8 +30,6 @@ logging.getLogger('transitions').setLevel(logging.INFO)
 
 LOCKED_INTERVAL = 8 * 60
 UNLOCKED_INTERVAL = 50 * 60
-SHOW_SECONDS = False
-STRICT = True
 
 
 def exempt():
@@ -109,10 +107,7 @@ class BreakTimer:
 
                 left = {time()} + {UNLOCKED_INTERVAL} - time()
                 if left > {UNLOCKED_INTERVAL} / 2:
-                    if {SHOW_SECONDS}:
-                        print(f"{{int(left)}} s | image='{get_image_base64("sand-clock.png")}' imageHeight=30")
-                    else:
-                        print(f"{{int(left / 60)}} min | image='{get_image_base64("sand-clock.png")}' imageHeight=30")
+                    print(f"{{int(left / 60)}} min | image='{get_image_base64("sand-clock.png")}' imageHeight=30")
                 else:
                     print(' ')
                 '''))
@@ -121,26 +116,18 @@ class BreakTimer:
         self.locked_start = time()
 
     def on_enter_wait_lock(self):
-        if STRICT:
-            if exempt():
-                write_argos_file(
-                    dedent(f'''\
-                        #!/usr/bin/env python3
-
-                        print(f"Lock exempted | image='{get_image_base64("warning.png")}' imageHeight=30")
-                        '''))
-            else:
-                screensaver_file = tempfile.NamedTemporaryFile()
-                with open(screensaver_file.name, 'w') as f:
-                    f.write(screensaver_text)
-                subprocess.run(['bash', screensaver_file.name, 'lock'])
-        else:
+        if exempt():
             write_argos_file(
                 dedent(f'''\
                     #!/usr/bin/env python3
 
-                    print(f"Break time | image='{get_image_base64("error.png")}' imageHeight=30")
+                    print(f"Lock exempted | image='{get_image_base64("warning.png")}' imageHeight=30")
                     '''))
+        else:
+            screensaver_file = tempfile.NamedTemporaryFile()
+            with open(screensaver_file.name, 'w') as f:
+                f.write(screensaver_text)
+            subprocess.run(['bash', screensaver_file.name, 'lock'])
 
     @property
     def unlocked_exceeding_half(self):
