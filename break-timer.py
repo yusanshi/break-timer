@@ -151,17 +151,18 @@ class BreakTimer:
         return time() - self.locked_start > LOCKED_INTERVAL
 
 
-timer = BreakTimer()
+if __name__ == '__main__':
+    timer = BreakTimer()
 
-while True:
-    sleep(1)
-    output = subprocess.check_output('ps -aux',
-                                     stderr=subprocess.STDOUT,
-                                     shell=True,
-                                     text=True)
-    if '/usr/share/gnome-shell/extensions/ding@rastersoft.com/ding.js' in output:
-        if timer.may_unlock():
-            timer.unlock()
-    else:
-        if timer.may_lock():
-            timer.lock()
+    while True:
+        sleep(1)
+        output = subprocess.check_output('ps -aux',
+                                         stderr=subprocess.STDOUT,
+                                         shell=True,
+                                         text=True)
+        if '/usr/share/gnome-shell/extensions/ding@rastersoft.com/ding.js' in output:
+            if timer.may_unlock():
+                timer.unlock()
+        else:
+            if timer.may_lock():
+                timer.lock()
