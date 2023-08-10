@@ -34,7 +34,7 @@ UNLOCKED_INTERVAL = 50 * 60
 
 def should_exempt():
     """Avoid locking if is doing something important"""
-    # exempt if is using the web camera (possibly in a interview)
+    # exempt if is using the web camera (possibly in an interview)
     try:
         return len(
             subprocess.check_output('fuser /dev/video0', shell=True,
