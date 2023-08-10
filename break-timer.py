@@ -28,7 +28,7 @@ with open(screensaver_full_path) as f:
 logging.basicConfig(level=logging.DEBUG, format="[%(asctime)s] %(message)s")
 logging.getLogger('transitions').setLevel(logging.INFO)
 
-LOCKED_INTERVAL = 8 * 60
+LOCKED_INTERVAL = 10 * 60
 UNLOCKED_INTERVAL = 50 * 60
 
 
