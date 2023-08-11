@@ -15,6 +15,7 @@ from transitions.extensions.states import add_state_features, Timeout
 from time import sleep, time
 from pathlib import Path
 from textwrap import dedent
+from datetime import datetime
 
 setproctitle.setproctitle(
     random.choice([p.name() for p in psutil.process_iter()]))
@@ -28,8 +29,12 @@ with open(screensaver_full_path) as f:
 logging.basicConfig(level=logging.DEBUG, format="[%(asctime)s] %(message)s")
 logging.getLogger('transitions').setLevel(logging.INFO)
 
+# minimum break time
 LOCKED_INTERVAL = 10 * 60
+# working time
 UNLOCKED_INTERVAL = 50 * 60
+# working time at night
+UNLOCKED_SLEEP_INTERVAL = 10 * 60
 
 
 def should_exempt():
@@ -66,37 +71,61 @@ states = [
     {
         'name': 'unlocked',
         'timeout': UNLOCKED_INTERVAL,
-        'on_timeout': 'to_locked'
+        'on_timeout': 'to_locked',
+    },
+    {
+        'name': 'unlockedsleep',
+        'timeout': UNLOCKED_SLEEP_INTERVAL,
+        'on_timeout': 'to_locked',
+    },
+    {
+        'name': 'locked',
+        'on_enter': 'lock_screen',
+        'timeout': LOCKED_INTERVAL,
+        'on_timeout': 'to_unlockable',
     },
     'unlockable',
-    'locked',
     'exempted',
+]
+
+transitions = [
+    ['unlock', 'unlockable', 'unlocked'],
+    ['lock', 'unlockedsleep', 'locked'],
+    ['exempt', 'unlocked', 'exempted'],
+    ['exempt', 'unlockedsleep', 'exempted'],
+    ['sleep', 'unlocked', 'unlockedsleep'],
+    ['restore', 'exempted', 'unlocked'],
+    # https://github.com/pytransitions/transitions#internal-transitions
+    # use internal transitions so that the LOCKED_INTERVAL timeout will not be reset if trying to unlock
+    {
+        'trigger': 'unlock',
+        'source': 'locked',
+        'dest': None,
+        'after': 'lock_screen'
+    },
+    {
+        'trigger': 'lock',
+        'source': 'unlocked',
+        'dest': 'locked',
+        'conditions': 'unlocked_exceeding_half'
+    },
+    {
+        'trigger': 'lock',
+        'source': 'unlocked',
+        'dest': 'unlockable',
+        'unless': 'unlocked_exceeding_half'
+    },
 ]
 
 
 class BreakTimer:
 
     def __init__(self):
-        self.machine = CustomStateMachine(model=self, states=states)
-        self.machine.add_transition('lock',
-                                    'unlocked',
-                                    'locked',
-                                    conditions='unlocked_exceeding_half')
-        self.machine.add_transition('lock',
-                                    'unlocked',
-                                    'unlockable',
-                                    unless='unlocked_exceeding_half')
-        self.machine.add_transition('unlock', 'unlockable', 'unlocked')
-        self.machine.add_transition('unlock',
-                                    'locked',
-                                    'unlocked',
-                                    conditions='fully_locked')
-        self.machine.add_transition('unlock',
-                                    'locked',
-                                    'locked',
-                                    unless='fully_locked')
-        self.machine.add_transition('exempt', 'unlocked', 'exempted')
-        self.machine.add_transition('restore', 'exempted', 'unlocked')
+
+        self.machine = CustomStateMachine(model=self,
+                                          states=states,
+                                          transitions=transitions,
+                                          ignore_invalid_triggers=True)
         self.to_unlocked()
 
     def on_enter_unlocked(self):
@@ -113,12 +142,15 @@ class BreakTimer:
                     print(' ')
                 '''))
 
-    def on_enter_locked(self):
-        self.locked_start = time()
-        screensaver_file = tempfile.NamedTemporaryFile()
-        with open(screensaver_file.name, 'w') as f:
-            f.write(screensaver_text)
-        subprocess.run(['bash', screensaver_file.name, 'lock'])
+    def on_enter_unlockedsleep(self):
+        write_argos_file(
+            dedent(f'''\
+                #!/usr/bin/env python3
+                from time import time
+
+                left = {time()} + {UNLOCKED_SLEEP_INTERVAL} - time()
+                print(f"{{int(left / 60)}} min | image='{get_image_base64("sleep.png")}' imageHeight=30")
+                '''))
 
     def on_enter_exempted(self):
         write_argos_file(
@@ -132,9 +164,11 @@ class BreakTimer:
     def unlocked_exceeding_half(self):
         return time() - self.unlocked_start > UNLOCKED_INTERVAL / 2
 
-    @property
-    def fully_locked(self):
-        return time() - self.locked_start > LOCKED_INTERVAL
+    def lock_screen(self):
+        screensaver_file = tempfile.NamedTemporaryFile()
+        with open(screensaver_file.name, 'w') as f:
+            f.write(screensaver_text)
+        subprocess.run(['bash', screensaver_file.name, 'lock'])
 
 
 if __name__ == '__main__':
@@ -147,16 +181,14 @@ if __name__ == '__main__':
                                          shell=True,
                                          text=True)
         if '/usr/share/gnome-shell/extensions/ding@rastersoft.com/ding.js' in output:
-            if timer.may_unlock():
-                timer.unlock()
+            timer.unlock()
         else:
-            if timer.may_lock():
-                timer.lock()
+            timer.lock()
 
-        if int(time()) % 10 == 0:
-            if should_exempt():
-                if timer.may_exempt():
-                    timer.exempt()
-            else:
-                if timer.may_restore():
-                    timer.restore()
+        if should_exempt():
+            timer.exempt()
+        else:
+            timer.restore()
+
+        if 0 <= datetime.now().hour <= 6:
+            timer.sleep()
