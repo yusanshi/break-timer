@@ -94,6 +94,7 @@ transitions = [
     ['exempt', 'unlocked', 'exempted'],
     ['exempt', 'unlockedsleep', 'exempted'],
     ['sleep', 'unlocked', 'unlockedsleep'],
+    ['awake', 'unlockedsleep', 'unlocked'],
     ['restore', 'exempted', 'unlocked'],
     # https://github.com/pytransitions/transitions#internal-transitions
     # use internal transitions so that the LOCKED_INTERVAL timeout will not be reset if trying to unlock
@@ -190,5 +191,10 @@ if __name__ == '__main__':
         else:
             timer.restore()
 
-        if 0 <= datetime.now().hour <= 6:
+        hour = datetime.now().hour
+        minute = datetime.now().minute
+        if 0 <= hour <= 6 or (hour == 12 and 0 <= minute <= 30) or (
+                hour == 18 and 0 <= minute <= 30):
             timer.sleep()
+        else:
+            timer.awake()
