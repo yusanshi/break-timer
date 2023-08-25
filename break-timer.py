@@ -9,6 +9,7 @@ import psutil
 import setproctitle
 import random
 import tempfile
+import requests
 
 from transitions import Machine
 from transitions.extensions.states import add_state_features, Timeout
@@ -16,6 +17,7 @@ from time import sleep, time
 from pathlib import Path
 from textwrap import dedent
 from datetime import datetime
+from urllib.parse import urlparse
 
 setproctitle.setproctitle(
     random.choice([p.name() for p in psutil.process_iter()]))
@@ -39,13 +41,29 @@ UNLOCKED_SLEEP_INTERVAL = 10 * 60
 
 def should_exempt():
     """Avoid locking if is doing something important"""
-    # exempt if is using the web camera (possibly in an interview)
+    # if is using the web camera (possibly in an interview)
     try:
-        return len(
-            subprocess.check_output('fuser /dev/video0', shell=True,
-                                    text=True).strip()) > 0
+        if len(
+                subprocess.check_output(
+                    'fuser /dev/video0', shell=True, text=True).strip()) > 0:
+            return True
     except subprocess.CalledProcessError:
-        return False
+        pass
+
+    # if is visiting the whitelist websites
+    try:
+        r = requests.get('http://127.0.0.1:9234/url/all')
+        data = r.json()
+        if isinstance(data, list):
+            hosts = set([urlparse(x).netloc for x in data])
+            whitelist = ['infoflow.baidu.com']
+            for x in whitelist:
+                if x in hosts:
+                    return True
+    except Exception:
+        pass
+
+    return False
 
 
 def get_image_base64(filename):
