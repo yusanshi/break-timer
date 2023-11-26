@@ -32,9 +32,9 @@ logging.basicConfig(level=logging.DEBUG, format="[%(asctime)s] %(message)s")
 logging.getLogger('transitions').setLevel(logging.INFO)
 
 # minimum break time
-LOCKED_INTERVAL = 10 * 60
+LOCKED_INTERVAL = 8 * 60
 # working time
-UNLOCKED_INTERVAL = 50 * 60
+UNLOCKED_INTERVAL = 55 * 60
 # working time at night
 UNLOCKED_SLEEP_INTERVAL = 10 * 60
 
@@ -56,12 +56,18 @@ def should_exempt():
         data = r.json()
         if isinstance(data, list):
             hosts = set([urlparse(x).netloc for x in data])
-            whitelist = ['infoflow.baidu.com']
+            whitelist = ['infoflow.baidu.com', 'interview.nowcoder.com']
             for x in whitelist:
                 if x in hosts:
                     return True
     except Exception:
         pass
+
+    # if is examining the experiments as a TA
+    hour = datetime.now().hour
+    weekday = datetime.now().isocalendar().weekday
+    if weekday == 3 and 19 <= hour <= 22:
+        return True
 
     return False
 
@@ -211,8 +217,9 @@ if __name__ == '__main__':
 
         hour = datetime.now().hour
         minute = datetime.now().minute
-        if 0 <= hour <= 6 or (hour == 12 and 0 <= minute <= 30) or (
-                hour == 18 and 0 <= minute <= 30):
+        combined = hour + minute / 60
+        intervals = [(0, 7), (11, 13), (17, 17.6666), (23, 24)]
+        if any([start <= combined <= end for start, end in intervals]):
             timer.sleep()
         else:
             timer.awake()
