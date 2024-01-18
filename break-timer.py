@@ -10,6 +10,7 @@ import setproctitle
 import random
 import tempfile
 import requests
+import sys
 
 from transitions import Machine
 from transitions.extensions.states import add_state_features, Timeout
@@ -36,7 +37,7 @@ LOCKED_INTERVAL = 8 * 60
 # working time
 UNLOCKED_INTERVAL = 55 * 60
 # working time at night
-UNLOCKED_SLEEP_INTERVAL = 10 * 60
+UNLOCKED_SLEEP_INTERVAL = 5 * 60
 
 
 def should_exempt():
@@ -62,12 +63,6 @@ def should_exempt():
                     return True
     except Exception:
         pass
-
-    # if is examining the experiments as a TA
-    hour = datetime.now().hour
-    weekday = datetime.now().isocalendar().weekday
-    if weekday == 3 and 19 <= hour <= 22:
-        return True
 
     return False
 
@@ -196,6 +191,17 @@ class BreakTimer:
 
 
 if __name__ == '__main__':
+    exempt_file = Path(os.path.expanduser('~/exempt'))
+    if exempt_file.is_file():
+        write_argos_file(
+            dedent(f'''\
+                #!/usr/bin/env python3
+
+                print(f"Lock exempted | image='{get_image_base64("info.png")}' imageHeight=30")
+                '''))
+        exempt_file.unlink()
+        sys.exit(0)
+
     timer = BreakTimer()
 
     while True:
