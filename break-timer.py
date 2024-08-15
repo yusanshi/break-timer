@@ -9,8 +9,6 @@ import psutil
 import setproctitle
 import random
 import tempfile
-import requests
-import sys
 
 from transitions import Machine
 from transitions.extensions.states import add_state_features, Timeout
@@ -18,7 +16,6 @@ from time import sleep, time
 from pathlib import Path
 from textwrap import dedent
 from datetime import datetime
-from urllib.parse import urlparse
 
 setproctitle.setproctitle(
     random.choice([p.name() for p in psutil.process_iter()]))
@@ -40,43 +37,6 @@ UNLOCKED_INTERVAL = 55 * 60
 UNLOCKED_SLEEP_INTERVAL = 5 * 60
 
 
-def should_exempt():
-    """Avoid locking if is doing something important"""
-    # if is using the web camera (possibly in an interview)
-    try:
-        if len(
-                subprocess.check_output(
-                    'fuser /dev/video0', shell=True, text=True).strip()) > 0:
-            return True
-    except subprocess.CalledProcessError:
-        pass
-
-    # if is watching videos
-    try:
-        if len(
-                subprocess.check_output('pgrep -a "vlc|mpv|totem"',
-                                        shell=True,
-                                        text=True).strip()) > 0:
-            return True
-    except subprocess.CalledProcessError:
-        pass
-
-    # if is visiting the whitelist websites
-    try:
-        r = requests.get('http://127.0.0.1:9234/url/all')
-        data = r.json()
-        if isinstance(data, list):
-            hosts = set([urlparse(x).netloc for x in data])
-            whitelist = ['interview.nowcoder.com']
-            for x in whitelist:
-                if x in hosts:
-                    return True
-    except Exception:
-        pass
-
-    return False
-
-
 def get_image_base64(filename):
     with open(Path(__file__).parent / 'image' / filename, 'rb') as f:
         return base64.b64encode(f.read()).decode()
@@ -96,35 +56,26 @@ class CustomStateMachine(Machine):
     pass
 
 
-states = [
-    {
-        'name': 'unlocked',
-        'timeout': UNLOCKED_INTERVAL,
-        'on_timeout': 'to_locked',
-    },
-    {
-        'name': 'unlockedsleep',
-        'timeout': UNLOCKED_SLEEP_INTERVAL,
-        'on_timeout': 'to_locked',
-    },
-    {
-        'name': 'locked',
-        'on_enter': 'lock_screen',
-        'timeout': LOCKED_INTERVAL,
-        'on_timeout': 'to_unlockable',
-    },
-    'unlockable',
-    'exempted',
-]
+states = [{
+    'name': 'unlocked',
+    'timeout': UNLOCKED_INTERVAL,
+    'on_timeout': 'to_locked',
+}, {
+    'name': 'unlockedsleep',
+    'timeout': UNLOCKED_SLEEP_INTERVAL,
+    'on_timeout': 'to_locked',
+}, {
+    'name': 'locked',
+    'on_enter': 'lock_screen',
+    'timeout': LOCKED_INTERVAL,
+    'on_timeout': 'to_unlockable',
+}, 'unlockable']
 
 transitions = [
     ['unlock', 'unlockable', 'unlocked'],
     ['lock', 'unlockedsleep', 'locked'],
-    ['exempt', 'unlocked', 'exempted'],
-    ['exempt', 'unlockedsleep', 'exempted'],
     ['sleep', 'unlocked', 'unlockedsleep'],
     ['awake', 'unlockedsleep', 'unlocked'],
-    ['restore', 'exempted', 'unlocked'],
     # https://github.com/pytransitions/transitions#internal-transitions
     # use internal transitions so that the LOCKED_INTERVAL timeout will not be reset if trying to unlock
     {
@@ -182,14 +133,6 @@ class BreakTimer:
                 print(f"{{int(left / 60)}} min | image='{get_image_base64("sleep.png")}' imageHeight=30")
                 '''))
 
-    def on_enter_exempted(self):
-        write_argos_file(
-            dedent(f'''\
-                #!/usr/bin/env python3
-
-                print(f"Lock exempted | image='{get_image_base64("info.png")}' imageHeight=30")
-                '''))
-
     @property
     def unlocked_exceeding_half(self):
         return time() - self.unlocked_start > UNLOCKED_INTERVAL / 2
@@ -202,17 +145,6 @@ class BreakTimer:
 
 
 if __name__ == '__main__':
-    exempt_file = Path(os.path.expanduser('~/exempt'))
-    if exempt_file.is_file():
-        write_argos_file(
-            dedent(f'''\
-                #!/usr/bin/env python3
-
-                print(f"Lock exempted | image='{get_image_base64("info.png")}' imageHeight=30")
-                '''))
-        while exempt_file.is_file():
-            sleep(1)
-
     timer = BreakTimer()
 
     while True:
@@ -225,11 +157,6 @@ if __name__ == '__main__':
             timer.unlock()
         else:
             timer.lock()
-
-        if should_exempt():
-            timer.exempt()
-        else:
-            timer.restore()
 
         hour = datetime.now().hour
         minute = datetime.now().minute
