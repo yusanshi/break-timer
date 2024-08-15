@@ -51,13 +51,23 @@ def should_exempt():
     except subprocess.CalledProcessError:
         pass
 
+    # if is watching videos
+    try:
+        if len(
+                subprocess.check_output('pgrep -a "vlc|mpv|totem"',
+                                        shell=True,
+                                        text=True).strip()) > 0:
+            return True
+    except subprocess.CalledProcessError:
+        pass
+
     # if is visiting the whitelist websites
     try:
         r = requests.get('http://127.0.0.1:9234/url/all')
         data = r.json()
         if isinstance(data, list):
             hosts = set([urlparse(x).netloc for x in data])
-            whitelist = ['infoflow.baidu.com', 'interview.nowcoder.com']
+            whitelist = ['interview.nowcoder.com']
             for x in whitelist:
                 if x in hosts:
                     return True
@@ -111,6 +121,7 @@ transitions = [
     ['unlock', 'unlockable', 'unlocked'],
     ['lock', 'unlockedsleep', 'locked'],
     ['exempt', 'unlocked', 'exempted'],
+    ['exempt', 'unlockedsleep', 'exempted'],
     ['sleep', 'unlocked', 'unlockedsleep'],
     ['awake', 'unlockedsleep', 'unlocked'],
     ['restore', 'exempted', 'unlocked'],
@@ -199,8 +210,8 @@ if __name__ == '__main__':
 
                 print(f"Lock exempted | image='{get_image_base64("info.png")}' imageHeight=30")
                 '''))
-        exempt_file.unlink()
-        sys.exit(0)
+        while exempt_file.is_file():
+            sleep(1)
 
     timer = BreakTimer()
 
