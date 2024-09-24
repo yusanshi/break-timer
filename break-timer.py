@@ -149,11 +149,11 @@ if __name__ == '__main__':
 
     while True:
         sleep(1)
-        output = subprocess.check_output('ps -aux',
+        output = subprocess.check_output('ps aux',
                                          stderr=subprocess.STDOUT,
                                          shell=True,
                                          text=True)
-        if '/usr/share/gnome-shell/extensions/ding@rastersoft.com/ding.js' in output:
+        if '/usr/share/gnome-shell/extensions/ding@rastersoft.com/app/ding.js' in output:
             timer.unlock()
         else:
             timer.lock()
@@ -161,7 +161,7 @@ if __name__ == '__main__':
         hour = datetime.now().hour
         minute = datetime.now().minute
         combined = hour + minute / 60
-        intervals = [(0, 7), (11, 13), (17, 17.6666), (23, 24)]
+        intervals = [(0, 7), (11.6666, 13), (17.6666, 19), (23, 24)]
         if any([start <= combined <= end for start, end in intervals]):
             timer.sleep()
         else:
