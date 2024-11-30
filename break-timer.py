@@ -1,27 +1,25 @@
 #!/usr/bin/env python3
 
-import subprocess
-import os
 import base64
-import stat
 import logging
-import psutil
-import setproctitle
+import os
 import random
+import stat
+import subprocess
 import tempfile
-
-from transitions import Machine
-from transitions.extensions.states import add_state_features, Timeout
-from time import sleep, time
+from datetime import datetime
 from pathlib import Path
 from textwrap import dedent
-from datetime import datetime
+from time import sleep, time
 
-setproctitle.setproctitle(
-    random.choice([p.name() for p in psutil.process_iter()]))
+import psutil
+import setproctitle
+from transitions import Machine
+from transitions.extensions.states import Timeout, add_state_features
 
-screensaver_full_path = subprocess.check_output('which xdg-screensaver',
-                                                shell=True,
+setproctitle.setproctitle(random.choice([p.name() for p in psutil.process_iter()]))
+
+screensaver_full_path = subprocess.check_output('which xdg-screensaver', shell=True,
                                                 text=True).strip()
 with open(screensaver_full_path) as f:
     screensaver_text = f.read()
@@ -35,6 +33,21 @@ LOCKED_INTERVAL = 8 * 60
 UNLOCKED_INTERVAL = 55 * 60
 # working time at night
 UNLOCKED_SLEEP_INTERVAL = 5 * 60
+
+
+def should_exempt():
+    """Avoid locking if is doing something important"""
+    # if is watching videos
+    try:
+        if len(
+                subprocess.check_output('pgrep -a "vlc|mpv|totem|jellyfin"',
+                                        shell=True,
+                                        text=True).strip()) > 0:
+            return True
+    except subprocess.CalledProcessError:
+        pass
+
+    return False
 
 
 def get_image_base64(filename):
@@ -56,26 +69,35 @@ class CustomStateMachine(Machine):
     pass
 
 
-states = [{
-    'name': 'unlocked',
-    'timeout': UNLOCKED_INTERVAL,
-    'on_timeout': 'to_locked',
-}, {
-    'name': 'unlockedsleep',
-    'timeout': UNLOCKED_SLEEP_INTERVAL,
-    'on_timeout': 'to_locked',
-}, {
-    'name': 'locked',
-    'on_enter': 'lock_screen',
-    'timeout': LOCKED_INTERVAL,
-    'on_timeout': 'to_unlockable',
-}, 'unlockable']
+states = [
+    {
+        'name': 'unlocked',
+        'timeout': UNLOCKED_INTERVAL,
+        'on_timeout': 'to_locked',
+    },
+    {
+        'name': 'unlockedsleep',
+        'timeout': UNLOCKED_SLEEP_INTERVAL,
+        'on_timeout': 'to_locked',
+    },
+    {
+        'name': 'locked',
+        'on_enter': 'lock_screen',
+        'timeout': LOCKED_INTERVAL,
+        'on_timeout': 'to_unlockable',
+    },
+    'unlockable',
+    'exempted',
+]
 
 transitions = [
     ['unlock', 'unlockable', 'unlocked'],
     ['lock', 'unlockedsleep', 'locked'],
+    ['exempt', 'unlocked', 'exempted'],
+    ['exempt', 'unlockedsleep', 'exempted'],
     ['sleep', 'unlocked', 'unlockedsleep'],
     ['awake', 'unlockedsleep', 'unlocked'],
+    ['restore', 'exempted', 'unlocked'],
     # https://github.com/pytransitions/transitions#internal-transitions
     # use internal transitions so that the LOCKED_INTERVAL timeout will not be reset if trying to unlock
     {
@@ -133,6 +155,14 @@ class BreakTimer:
                 print(f"{{int(left / 60)}} min | image='{get_image_base64("sleep.png")}' imageHeight=30")
                 '''))
 
+    def on_enter_exempted(self):
+        write_argos_file(
+            dedent(f'''\
+                #!/usr/bin/env python3
+
+                print(f"Lock exempted | image='{get_image_base64("info.png")}' imageHeight=30")
+                '''))
+
     @property
     def unlocked_exceeding_half(self):
         return time() - self.unlocked_start > UNLOCKED_INTERVAL / 2
@@ -157,6 +187,11 @@ if __name__ == '__main__':
             timer.unlock()
         else:
             timer.lock()
+
+        if should_exempt():
+            timer.exempt()
+        else:
+            timer.restore()
 
         hour = datetime.now().hour
         minute = datetime.now().minute
