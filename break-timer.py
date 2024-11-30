@@ -94,7 +94,7 @@ transitions = [
     ['unlock', 'unlockable', 'unlocked'],
     ['lock', 'unlockedsleep', 'locked'],
     ['exempt', 'unlocked', 'exempted'],
-    ['exempt', 'unlockedsleep', 'exempted'],
+    # ['exempt', 'unlockedsleep', 'exempted'],
     ['sleep', 'unlocked', 'unlockedsleep'],
     ['awake', 'unlockedsleep', 'unlocked'],
     ['restore', 'exempted', 'unlocked'],
