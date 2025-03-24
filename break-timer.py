@@ -19,8 +19,7 @@ from transitions.extensions.states import Timeout, add_state_features
 
 setproctitle.setproctitle(random.choice([p.name() for p in psutil.process_iter()]))
 
-screensaver_full_path = subprocess.check_output('which xdg-screensaver', shell=True,
-                                                text=True).strip()
+screensaver_full_path = subprocess.check_output('which xdg-screensaver', shell=True, text=True).strip()
 with open(screensaver_full_path) as f:
     screensaver_text = f.read()
 
@@ -40,8 +39,7 @@ def should_exempt():
     # if is watching videos
     try:
         if len(
-                subprocess.check_output('pgrep -a "vlc|mpv|totem|jellyfin"',
-                                        shell=True,
+                subprocess.check_output('pgrep -a "vlc|mpv|totem|jellyfin"', shell=True,
                                         text=True).strip()) > 0:
             return True
     except subprocess.CalledProcessError:
@@ -69,6 +67,10 @@ class CustomStateMachine(Machine):
     pass
 
 
+def run_silent(command):
+    subprocess.run(command, shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+
 states = [
     {
         'name': 'unlocked',
@@ -76,9 +78,15 @@ states = [
         'on_timeout': 'to_locked',
     },
     {
-        'name': 'unlockedsleep',
-        'timeout': UNLOCKED_SLEEP_INTERVAL,
-        'on_timeout': 'to_locked',
+        'name':
+            'unlockedsleep',
+        'timeout':
+            UNLOCKED_SLEEP_INTERVAL,
+        # 'on_timeout': 'to_locked',
+        'on_timeout':
+            lambda: run_silent(
+                """notify-send -u critical 'break-timer: will shutdown in 30s'; sleep 30; sudo poweroff"""
+            )
     },
     {
         'name': 'locked',
@@ -179,10 +187,7 @@ if __name__ == '__main__':
 
     while True:
         sleep(1)
-        output = subprocess.check_output('ps aux',
-                                         stderr=subprocess.STDOUT,
-                                         shell=True,
-                                         text=True)
+        output = subprocess.check_output('ps aux', stderr=subprocess.STDOUT, shell=True, text=True)
         if '/usr/share/gnome-shell/extensions/ding@rastersoft.com/app/ding.js' in output:
             timer.unlock()
         else:
@@ -196,7 +201,7 @@ if __name__ == '__main__':
         hour = datetime.now().hour
         minute = datetime.now().minute
         combined = hour + minute / 60
-        intervals = [(0, 7), (11.6666, 13), (17.6666, 19), (23, 24)]
+        intervals = [(0, 7), (11.6666, 13), (17.6666, 19), (22.5, 24)]
         if any([start <= combined <= end for start, end in intervals]):
             timer.sleep()
         else:
