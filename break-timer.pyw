@@ -1,4 +1,3 @@
-#!/usr/bin/env pythonw
 # run `shell:startup` and put shortcut of this file into it
 
 import subprocess
