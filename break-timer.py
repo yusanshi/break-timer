@@ -79,14 +79,13 @@ states = [
     },
     {
         'name':
-            'unlockedsleep',
+        'unlockedsleep',
         'timeout':
-            UNLOCKED_SLEEP_INTERVAL,
+        UNLOCKED_SLEEP_INTERVAL,
         # 'on_timeout': 'to_locked',
         'on_timeout':
-            lambda: run_silent(
-                """notify-send -u critical 'break-timer: will shutdown in 30s'; sleep 30; sudo poweroff"""
-            )
+        lambda: run_silent(
+            """notify-send -u critical 'break-timer: will shutdown in 30s'; sleep 30; sudo poweroff""")
     },
     {
         'name': 'locked',
@@ -201,7 +200,7 @@ if __name__ == '__main__':
         hour = datetime.now().hour
         minute = datetime.now().minute
         combined = hour + minute / 60
-        intervals = [(0, 7), (11.6666, 13), (17.6666, 19), (22.5, 24)]
+        intervals = [(0, 7), (11.6666, 13), (17.6666, 19), (22.6666, 24)]
         if any([start <= combined <= end for start, end in intervals]):
             timer.sleep()
         else:
