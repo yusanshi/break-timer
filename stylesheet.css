@@ -1,0 +1,18 @@
+.break-timer-work-icon { -st-icon-style: regular; }
+.break-timer-panel-label {
+    text-align: center;
+    font-variant-numeric: tabular-nums;
+}
+.break-timer-warning { color: #ffbe6f; font-weight: bold; }
+.break-timer-shield { background-color: #101b23; color: #edf4f5; }
+.break-timer-card { spacing: 24px; padding: 32px; }
+.break-timer-title { font-size: 26px; font-weight: 600; text-align: center; }
+.break-timer-countdown { font-size: 64px; font-weight: 300; font-variant-numeric: tabular-nums; text-align: center; }
+.break-timer-detail { color: #b3c5cd; font-size: 15px; text-align: center; }
+.break-timer-resume { background-color: #9cdec9; color: #10261e; border-radius: 14px; padding: 16px 30px; font-weight: bold; }
+.break-timer-resume:hover, .break-timer-resume:focus { background-color: #c4f4e4; box-shadow: 0 0 0 3px #4c927d; }
+.break-timer-lock { color: #b3c5cd; padding: 10px 18px; border-radius: 10px; }
+.break-timer-lock:hover, .break-timer-lock:focus { background-color: #283c46; color: white; }
+.break-timer-reminder { background-color: #24323a; color: #edf4f5; border: 1px solid #526b79; border-radius: 16px; padding: 20px; spacing: 10px; box-shadow: 0 6px 24px rgba(0, 0, 0, 0.3); }
+.break-timer-reminder-title { font-weight: bold; font-size: 16px; }
+.break-timer-reminder-time { color: #ffbe6f; font-size: 28px; font-variant-numeric: tabular-nums; }

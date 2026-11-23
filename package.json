@@ -1,0 +1,11 @@
+{
+  "name": "break-timer",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "TZ=Asia/Shanghai node --test --test-isolation=none tests/*.test.js",
+    "check": "bash scripts/check.sh",
+    "pack": "bash scripts/pack.sh"
+  }
+}

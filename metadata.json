@@ -1,0 +1,9 @@
+{
+  "uuid": "break-timer@local",
+  "name": "Break Timer",
+  "description": "定时强制休息、每日禁用时段和顶栏倒计时。保留 GNOME 的系统锁屏认证。",
+  "shell-version": ["50"],
+  "session-modes": ["user", "unlock-dialog"],
+  "settings-schema": "org.gnome.shell.extensions.break-timer",
+  "version": 1
+}

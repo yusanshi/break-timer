@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schemalist>
+  <schema id="org.gnome.shell.extensions.break-timer" path="/org/gnome/shell/extensions/break-timer/">
+    <key name="work-minutes" type="i">
+      <default>50</default>
+      <range min="1" max="1440"/>
+      <summary>每轮工作分钟数（下轮生效）</summary>
+    </key>
+    <key name="break-minutes" type="i">
+      <default>10</default>
+      <range min="1" max="1440"/>
+      <summary>每轮休息分钟数（下次休息生效）</summary>
+    </key>
+    <key name="blocked-ranges" type="as">
+      <default>['00:00-08:00', '12:00-13:00', '18:00-19:00']</default>
+      <summary>每日本地时间封禁区间，支持跨午夜，结束时刻不包含在区间内</summary>
+    </key>
+    <key name="break-warning-seconds" type="i">
+      <default>60</default>
+      <range min="0" max="3600"/>
+      <summary>休息前顶栏闪烁秒数，0 关闭提醒</summary>
+    </key>
+    <key name="block-warning-seconds" type="i">
+      <default>180</default>
+      <range min="0" max="3600"/>
+      <summary>封禁前浮窗提醒秒数，0 关闭提醒</summary>
+    </key>
+    <key name="saved-state" type="s">
+      <default>''</default>
+      <summary>内部状态快照，用于锁屏、会话重启和重新启用后恢复</summary>
+    </key>
+  </schema>
+</schemalist>
