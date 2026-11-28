@@ -7,6 +7,7 @@ import * as LoginManager from 'resource:///org/gnome/shell/misc/loginManager.js'
 import {TimerEngine, DEFAULTS} from './lib/engine.js';
 import {Clock} from './lib/clock.js';
 import {IdleInhibitor} from './lib/idleInhibitor.js';
+import {IdleRecovery} from './lib/idleRecovery.js';
 import {BreakShield} from './ui/shield.js';
 import {Indicator, BlockReminder} from './ui/indicator.js';
 
@@ -27,6 +28,7 @@ export default class BreakTimerExtension extends Extension {
         this._loginManager = LoginManager.getLoginManager();
         this._sleeping = Boolean(this._loginManager.preparingForSleep);
         this._inhibitor = new IdleInhibitor();
+        this._idleRecovery = new IdleRecovery(Main.screenShield);
         let saved = null;
         try {
             saved = JSON.parse(this._settings.get_string('saved-state'));
@@ -46,7 +48,10 @@ export default class BreakTimerExtension extends Extension {
         this._lastSave = 0;
         this._lastSignature = '';
 
-        this._connect(Main.screenShield, 'active-changed', () => this._sync());
+        this._connect(Main.screenShield, 'active-changed', () => {
+            this._sync();
+            this._idleRecovery.screenActiveChanged();
+        });
         this._connect(Main.screenShield, 'locked-changed', () => this._sync());
         this._connect(Main.sessionMode, 'updated', () => this._sync());
         this._connect(this._loginManager, 'prepare-for-sleep', (_manager, sleeping) => {
@@ -58,7 +63,8 @@ export default class BreakTimerExtension extends Extension {
             if (key === 'saved-state')
                 return;
             try {
-                this._engine.configure(this._readConfig());
+                if (key !== 'inhibit-idle')
+                    this._engine.configure(this._readConfig());
                 this._sync();
             } catch (error) {
                 Main.notify('Break Timer 配置未应用', error.message);
@@ -118,7 +124,9 @@ export default class BreakTimerExtension extends Extension {
         this._shield.update(view, locked, this._authenticating());
         this._indicator.update(view, !locked);
         this._reminder.update(view, !locked);
-        this._inhibitor.setWanted(!locked && view.state !== 'work');
+        const inhibitIdle = this._settings.get_boolean('inhibit-idle');
+        this._inhibitor.setWanted(inhibitIdle && !locked && view.state !== 'work');
+        this._idleRecovery.setEnabled(!inhibitIdle && !this._sleeping && view.state !== 'work');
         const signature = `${view.state}:${view.away}:${this._engine.phase}`;
         if (signature !== this._lastSignature || now.boot - this._lastSave >= 30_000) {
             this._save();
@@ -166,6 +174,7 @@ export default class BreakTimerExtension extends Extension {
             }
         }
         this._inhibitor?.destroy();
+        this._idleRecovery?.destroy();
         this._shield?.destroy();
         this._reminder?.destroy();
         this._indicator?.destroy();
@@ -173,6 +182,7 @@ export default class BreakTimerExtension extends Extension {
         this._reminder = null;
         this._indicator = null;
         this._inhibitor = null;
+        this._idleRecovery = null;
         this._engine = null;
         this._settings = null;
         this._clock = null;

@@ -29,9 +29,19 @@ app.connect('activate', () => {
         const widgets = descendants(window);
         const spins = widgets.filter(w => w instanceof Adw.SpinRow);
         const entry = widgets.find(w => w instanceof Adw.EntryRow);
-        if (spins.length !== 4 || !entry)
+        const inhibitIdle = widgets.find(w => w instanceof Adw.SwitchRow);
+        if (spins.length !== 4 || !entry || !inhibitIdle)
             throw new Error('Preferences controls missing');
         const settings = window._settings;
+        settings.reset('inhibit-idle');
+        if (inhibitIdle.active)
+            throw new Error('Idle inhibition must default to off');
+        inhibitIdle.active = true;
+        if (!settings.get_boolean('inhibit-idle'))
+            throw new Error('Idle inhibition setting was not saved');
+        settings.set_boolean('inhibit-idle', false);
+        if (inhibitIdle.active)
+            throw new Error('Idle inhibition switch did not follow settings');
         spins[0].value = 25;
         if (settings.get_int('work-minutes') !== 25)
             throw new Error('Duration setting was not saved');

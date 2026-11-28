@@ -25,6 +25,11 @@
       <range min="0" max="3600"/>
       <summary>封禁前浮窗提醒秒数，0 关闭提醒</summary>
     </key>
+    <key name="inhibit-idle" type="b">
+      <default>false</default>
+      <summary>休息、封禁和等待继续时抑制自动空闲行为</summary>
+      <description>开启后阻止自动关屏、锁屏和休眠；手动锁屏和休眠不受影响。关闭时遵循系统设置。</description>
+    </key>
     <key name="saved-state" type="s">
       <default>''</default>
       <summary>内部状态快照，用于锁屏、会话重启和重新启用后恢复</summary>

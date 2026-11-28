@@ -51,6 +51,12 @@ export default class BreakTimerPreferences extends ExtensionPreferences {
 
         const behavior = new Adw.PreferencesGroup({title: '锁屏与休眠'});
         page.add(behavior);
+        const inhibitIdle = new Adw.SwitchRow({
+            title: '空闲抑制',
+            subtitle: '开启后，休息、封禁和等待继续时阻止自动关屏、锁屏与休眠；手动锁屏和休眠不受影响。',
+        });
+        settings.bind('inhibit-idle', inhibitIdle, 'active', Gio.SettingsBindFlags.DEFAULT);
+        behavior.add(inhibitIdle);
         for (const [title, subtitle] of [
             ['短暂离开暂停工作计时', '锁屏或休眠满一个休息周期，回来后即可手动开始新一轮工作。'],
             ['休眠时间计入休息', '休息或封禁结束后，等待你点击“结束休息，开始工作”。'],
